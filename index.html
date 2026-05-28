@@ -3,9 +3,391 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>こんにちわ</title>
+  <title>ねこシューティング</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #f9c74f;
+      text-shadow: 0 0 10px #f9c74f88;
+    }
+    #hud {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    #hud span { color: #f9c74f; font-weight: bold; }
+    canvas {
+      border: 2px solid #f9c74f44;
+      border-radius: 8px;
+      background: #16213e;
+      box-shadow: 0 0 30px #f9c74f22;
+    }
+    #info {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
-  <h1>こんにちわ</h1>
+  <h1>🐱 ねこシューティング 👹</h1>
+  <div id="hud">
+    <div>スコア: <span id="score">0</span></div>
+    <div>ライフ: <span id="lives">❤️❤️❤️</span></div>
+    <div>ウェーブ: <span id="wave">1</span></div>
+  </div>
+  <canvas id="canvas" width="480" height="600"></canvas>
+  <div id="info">← → 移動 ｜ スペース 攻撃 ｜ P 一時停止</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let state = 'title';
+let score = 0, lives = 3, wave = 1;
+let frameCount = 0;
+
+const player = {
+  x: W / 2, y: H - 60, w: 48, h: 48,
+  speed: 5, shootCooldown: 0,
+  invincible: 0,
+};
+
+let bullets = [];
+let enemyBullets = [];
+let enemies = [];
+let particles = [];
+let stars = [];
+
+for (let i = 0; i < 80; i++) {
+  stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.5 + 0.3, speed: Math.random() * 0.4 + 0.1 });
+}
+
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+  if (e.code === 'KeyP' && state === 'playing') state = 'paused';
+  else if (e.code === 'KeyP' && state === 'paused') state = 'playing';
+  if ((state === 'title' || state === 'gameover') && e.code === 'Space') startGame();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function spawnWave() {
+  enemies = [];
+  const cols = Math.min(3 + wave, 7);
+  const rows = Math.min(1 + Math.floor(wave / 2), 4);
+  const spacingX = (W - 60) / cols;
+  const spacingY = 70;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      enemies.push({
+        x: 30 + c * spacingX + spacingX / 2,
+        y: 60 + r * spacingY,
+        w: 44, h: 44,
+        hp: 1 + Math.floor(wave / 3),
+        maxHp: 1 + Math.floor(wave / 3),
+        shootTimer: Math.random() * 120,
+        dx: (1 + wave * 0.15) * (Math.random() > 0.5 ? 1 : -1),
+      });
+    }
+  }
+}
+
+function startGame() {
+  score = 0; lives = 3; wave = 1; frameCount = 0;
+  player.x = W / 2; player.y = H - 60;
+  player.invincible = 0; player.shootCooldown = 0;
+  bullets = []; enemyBullets = []; particles = [];
+  spawnWave();
+  state = 'playing';
+  updateHUD();
+}
+
+function updateHUD() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('lives').textContent = '❤️'.repeat(lives);
+  document.getElementById('wave').textContent = wave;
+}
+
+function spawnParticles(x, y, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
+    const speed = Math.random() * 3 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1, decay: Math.random() * 0.03 + 0.02,
+      r: Math.random() * 4 + 2,
+      color,
+    });
+  }
+}
+
+function drawCat(x, y, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = '42px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🐱', x, y);
+  ctx.restore();
+}
+
+function drawOni(e) {
+  ctx.font = '38px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('👹', e.x, e.y);
+  if (e.maxHp > 1) {
+    const bw = 36, bh = 5;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(e.x - bw / 2, e.y + 22, bw, bh);
+    ctx.fillStyle = '#e63946';
+    ctx.fillRect(e.x - bw / 2, e.y + 22, bw * (e.hp / e.maxHp), bh);
+  }
+}
+
+function drawBullet(b) {
+  ctx.save();
+  ctx.shadowColor = '#f9c74f';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#f9c74f';
+  ctx.beginPath();
+  ctx.ellipse(b.x, b.y, 5, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEnemyBullet(b) {
+  ctx.save();
+  ctx.shadowColor = '#e63946';
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = '#e63946';
+  ctx.beginPath();
+  ctx.ellipse(b.x, b.y, 5, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStars() {
+  ctx.fillStyle = '#fff';
+  for (const s of stars) {
+    ctx.globalAlpha = Math.random() * 0.5 + 0.3;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function hits(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax - aw/2 < bx + bw/2 && ax + aw/2 > bx - bw/2 &&
+         ay - ah/2 < by + bh/2 && ay + ah/2 > by - bh/2;
+}
+
+function update() {
+  frameCount++;
+
+  for (const s of stars) {
+    s.y += s.speed;
+    if (s.y > H) s.y = 0;
+  }
+
+  if (keys['ArrowLeft'])  player.x = Math.max(player.w / 2, player.x - player.speed);
+  if (keys['ArrowRight']) player.x = Math.min(W - player.w / 2, player.x + player.speed);
+
+  if (keys['Space'] && player.shootCooldown <= 0) {
+    bullets.push({ x: player.x, y: player.y - 24, vy: -12 });
+    player.shootCooldown = 15;
+  }
+  if (player.shootCooldown > 0) player.shootCooldown--;
+  if (player.invincible > 0) player.invincible--;
+
+  bullets = bullets.filter(b => b.y > -10);
+  for (const b of bullets) b.y += b.vy;
+
+  let hitWall = false;
+  for (const e of enemies) {
+    e.x += e.dx;
+    if (e.x > W - e.w / 2 || e.x < e.w / 2) hitWall = true;
+    e.shootTimer--;
+    if (e.shootTimer <= 0) {
+      enemyBullets.push({ x: e.x, y: e.y + 22, vy: 4 + wave * 0.3 });
+      e.shootTimer = 60 + Math.random() * 80;
+    }
+  }
+  if (hitWall) {
+    for (const e of enemies) {
+      e.dx *= -1;
+      e.y += 10;
+    }
+  }
+
+  enemyBullets = enemyBullets.filter(b => b.y < H + 10);
+  for (const b of enemyBullets) b.y += b.vy;
+
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.05;
+    p.life -= p.decay;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  for (let bi = bullets.length - 1; bi >= 0; bi--) {
+    const b = bullets[bi];
+    for (let ei = enemies.length - 1; ei >= 0; ei--) {
+      const e = enemies[ei];
+      if (hits(b.x, b.y, 10, 20, e.x, e.y, e.w, e.h)) {
+        bullets.splice(bi, 1);
+        e.hp--;
+        if (e.hp <= 0) {
+          spawnParticles(e.x, e.y, '#f9c74f');
+          enemies.splice(ei, 1);
+          score += 100 * wave;
+          updateHUD();
+        } else {
+          spawnParticles(e.x, e.y, '#e63946', 5);
+        }
+        break;
+      }
+    }
+  }
+
+  if (player.invincible <= 0) {
+    for (let bi = enemyBullets.length - 1; bi >= 0; bi--) {
+      const b = enemyBullets[bi];
+      if (hits(b.x, b.y, 10, 16, player.x, player.y, 36, 36)) {
+        enemyBullets.splice(bi, 1);
+        lives--;
+        player.invincible = 120;
+        spawnParticles(player.x, player.y, '#e63946');
+        updateHUD();
+        if (lives <= 0) { state = 'gameover'; return; }
+      }
+    }
+  }
+
+  if (player.invincible <= 0) {
+    for (const e of enemies) {
+      if (hits(player.x, player.y, 36, 36, e.x, e.y, e.w, e.h)) {
+        lives--;
+        player.invincible = 120;
+        spawnParticles(player.x, player.y, '#e63946');
+        updateHUD();
+        if (lives <= 0) { state = 'gameover'; return; }
+      }
+    }
+  }
+
+  for (const e of enemies) {
+    if (e.y > H - 80) {
+      lives = 0;
+      updateHUD();
+      state = 'gameover';
+      return;
+    }
+  }
+
+  if (enemies.length === 0) {
+    wave++;
+    bullets = []; enemyBullets = [];
+    spawnWave();
+    updateHUD();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawStars();
+
+  if (state === 'title') {
+    ctx.fillStyle = '#f9c74f';
+    ctx.font = 'bold 32px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🐱 ねこシューティング 👹', W / 2, H / 2 - 80);
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText('← → で移動', W / 2, H / 2 - 10);
+    ctx.fillText('スペースで攻撃', W / 2, H / 2 + 25);
+    ctx.fillText('P で一時停止', W / 2, H / 2 + 60);
+    ctx.fillStyle = '#f9c74f';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('[ スペース ] でスタート', W / 2, H / 2 + 120);
+    ctx.font = '60px serif';
+    ctx.fillText('🐱', W / 2, H / 2 - 160);
+    return;
+  }
+
+  if (state === 'gameover') {
+    ctx.fillStyle = '#e63946';
+    ctx.font = 'bold 48px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', W / 2, H / 2 - 60);
+    ctx.fillStyle = '#f9c74f';
+    ctx.font = '26px sans-serif';
+    ctx.fillText(`スコア: ${score}`, W / 2, H / 2);
+    ctx.fillText(`ウェーブ: ${wave}`, W / 2, H / 2 + 40);
+    ctx.fillStyle = '#ccc';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('[ スペース ] でリトライ', W / 2, H / 2 + 100);
+    return;
+  }
+
+  for (const e of enemies) drawOni(e);
+  for (const b of bullets) drawBullet(b);
+  for (const b of enemyBullets) drawEnemyBullet(b);
+
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  const alpha = player.invincible > 0 ? (Math.floor(frameCount / 6) % 2 === 0 ? 0.3 : 1) : 1;
+  drawCat(player.x, player.y, alpha);
+
+  if (state === 'paused') {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#f9c74f';
+    ctx.font = 'bold 40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('一時停止', W / 2, H / 2);
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText('[ P ] で再開', W / 2, H / 2 + 50);
+  }
+}
+
+function loop() {
+  if (state === 'playing') update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
 </body>
 </html>
