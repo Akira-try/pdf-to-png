@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a1a">
+<title>予算管理マスター</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,'Hiragino Sans','Yu Gothic UI','Segoe UI',sans-serif;background:#0a0a1a;color:#e8e8f0;overflow-x:hidden;}
+
+/* ===== OPENING ===== */
+#opening{position:fixed;inset:0;z-index:9999;overflow:hidden;}
+#skip-btn{
+  position:absolute;bottom:calc(24px + env(safe-area-inset-bottom,0px));right:20px;
+  background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);
+  color:#fff;padding:10px 22px;border-radius:22px;font-size:14px;z-index:10000;
+  min-height:44px;cursor:pointer;
+}
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 0.75s ease;pointer-events:none;padding:20px;}
+.scene.active{opacity:1;pointer-events:all;}
+
+/* Scene 1 – Alarm */
+#s1{background:linear-gradient(170deg,#08081a 0%,#1a0a40 35%,#7b2fa0 65%,#ff7030 85%,#ffd060 100%);}
+.alarm{font-size:min(22vw,90px);display:inline-block;animation:alarmShake 0.12s infinite;}
+@keyframes alarmShake{0%,100%{transform:rotate(-9deg);}50%{transform:rotate(9deg);}}
+.s1-sub{font-size:min(7vw,30px);color:#ffd700;text-shadow:0 0 24px #ffd700;margin-top:16px;letter-spacing:5px;}
+.s1-msg{font-size:min(4vw,16px);color:#aaa;margin-top:10px;text-align:center;}
+
+/* Scene 2 – Train */
+#s2{background:linear-gradient(180deg,#7ac4e0 0%,#c8e8f8 55%,#d8d8d8 100%);}
+.train-outer{
+  position:relative;
+  width:min(92vw,520px);
+  height:min(26vw,175px);
+  flex-shrink:0;
+}
+.train-body{
+  position:absolute;bottom:min(5vw,28px);left:0;right:0;
+  height:min(20vw,115px);
+  background:linear-gradient(180deg,#f0f0f0,#d0d0d8);
+  border-radius:min(3vw,14px) min(3vw,14px) min(1.5vw,6px) min(1.5vw,6px);
+  border:2px solid #999;box-shadow:0 6px 18px rgba(0,0,0,0.2);
+  animation:trainRock 0.35s ease-in-out infinite alternate;
+}
+@keyframes trainRock{0%{transform:rotate(-0.4deg);}100%{transform:rotate(0.4deg);}}
+.train-stripe{position:absolute;top:0;left:0;right:0;height:min(2.5vw,12px);background:#2266cc;border-radius:inherit;}
+.windows-row{position:absolute;top:min(3.5vw,18px);left:min(2vw,10px);right:min(2vw,10px);display:flex;gap:min(1.5vw,7px);}
+.tw{
+  flex:1;height:min(10vw,54px);
+  background:linear-gradient(135deg,#a8d8ea,#6ab4d4);
+  border-radius:4px;border:1.5px solid #888;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1px;padding:2px;
+}
+.face{
+  width:min(3.5vw,16px);height:min(3.5vw,16px);
+  background:#ffcc88;border-radius:50%;border:1px solid #cc9966;flex-shrink:0;position:relative;
+}
+.face::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:2px;background:#cc6633;border-radius:0 0 2px 2px;}
+.train-wheels{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:0 min(5vw,25px);}
+.wheel{
+  width:min(5.5vw,25px);height:min(5.5vw,25px);
+  background:radial-gradient(circle,#888,#444);border-radius:50%;border:2px solid #555;
+  animation:wspin 0.25s linear infinite;
+}
+@keyframes wspin{to{transform:rotate(360deg);}}
+.s2-cap{font-size:min(6vw,24px);font-weight:bold;color:#2a3a4a;margin-top:16px;text-align:center;}
+.s2-sub{font-size:min(3.8vw,14px);color:#556;margin-top:6px;text-align:center;}
+
+/* Scene 3 – Office */
+#s3{background:linear-gradient(180deg,#7ac0d8 0%,#c8e0f0 55%,#e0e0e0 100%);}
+.office-wrap{position:relative;width:min(80vw,280px);height:min(80vw,280px);}
+.building{
+  position:absolute;bottom:0;left:min(15vw,50px);
+  width:min(50vw,160px);height:min(72vw,240px);
+  background:linear-gradient(180deg,#c8d4e0,#aab8c8);border:2px solid #889;border-radius:3px 3px 0 0;
+}
+.bwin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:14px 11px;}
+.bw{height:min(5vw,20px);background:#ffe866;border-radius:2px;box-shadow:0 0 5px rgba(255,220,0,0.5);}
+.bdoor{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:30px;height:46px;background:#3a2a1a;border-radius:3px 3px 0 0;}
+.bsign{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:#2266cc;color:#fff;font-size:8px;padding:2px 5px;border-radius:2px;white-space:nowrap;}
+.walker{position:absolute;bottom:6px;font-size:min(8vw,32px);animation:walkIn 2.2s ease-out forwards;}
+@keyframes walkIn{0%{right:-50px;}100%{right:min(58vw,195px);}}
+.s3-cap{font-size:min(5.5vw,21px);font-weight:bold;color:#334;margin-top:20px;text-align:center;}
+
+/* Scene 4 – Desk */
+#s4{background:#0a0a18;}
+.monitor{
+  width:min(75vw,270px);height:min(55vw,190px);
+  background:#111;border:4px solid #3a3a5a;border-radius:9px;
+  position:relative;box-shadow:0 0 40px rgba(0,140,255,0.35);
+}
+.mscreen{position:absolute;inset:7px;background:#060e1e;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:10px;}
+.sline{height:3px;border-radius:2px;background:rgba(0,180,255,0.2);}
+.sline.hi{background:rgba(0,200,255,0.7);box-shadow:0 0 6px rgba(0,200,255,0.5);animation:spulse 1.2s infinite;}
+@keyframes spulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.mstand{width:15px;height:22px;background:#2a2a4a;margin:0 auto;}
+.mbase{width:70px;height:8px;background:#2a2a4a;border-radius:4px;margin:0 auto;}
+#desk-text{font-size:min(5.5vw,22px);font-weight:bold;color:#00ccff;text-shadow:0 0 20px rgba(0,200,255,0.7);margin-top:20px;min-height:32px;text-align:center;line-height:1.5;}
+#start-btn{
+  display:none;margin-top:20px;padding:14px 36px;
+  background:linear-gradient(135deg,#0088ff,#00ccff);
+  border:none;border-radius:12px;color:#fff;font-size:min(4.5vw,18px);font-weight:bold;cursor:pointer;
+  animation:btnGlow 1.5s infinite alternate;box-shadow:0 4px 20px rgba(0,150,255,0.5);
+  min-height:50px;min-width:200px;
+}
+@keyframes btnGlow{from{box-shadow:0 4px 20px rgba(0,150,255,0.4);}to{box-shadow:0 4px 35px rgba(0,200,255,0.8);}}
+
+/* ===== GAME ===== */
+#game{
+  display:none;min-height:100vh;
+  background:#080814;
+  padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));
+}
+
+/* Sticky Header */
+.sticky-hdr{
+  position:sticky;top:0;z-index:200;
+  background:#0f0f22;border-bottom:1px solid #252545;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;
+}
+.shdr-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.shdr-title{font-size:13px;font-weight:bold;color:#0099ff;}
+.shdr-day{font-size:16px;font-weight:bold;color:#fff;}
+.mbar{height:6px;background:#1e1e3a;border-radius:3px;overflow:hidden;margin-bottom:7px;}
+.mbar-fill{height:100%;background:linear-gradient(90deg,#0066ff,#00ccff);border-radius:3px;transition:width 0.5s;}
+.shdr-stats{display:flex;gap:0;background:#12122a;border-radius:8px;overflow:hidden;}
+.sstat{flex:1;text-align:center;padding:7px 4px;border-right:1px solid #1e1e3a;}
+.sstat:last-child{border-right:none;}
+.sstat-l{font-size:10px;color:#666;margin-bottom:2px;}
+.sstat-v{font-size:14px;font-weight:bold;}
+
+/* Boss Banner */
+.boss-banner{
+  background:#16102a;border-bottom:1px solid #2a1e3a;
+  padding:10px 14px;display:flex;align-items:flex-start;gap:8px;
+}
+.boss-ava{font-size:22px;flex-shrink:0;margin-top:1px;}
+.boss-msg{font-size:12px;color:#cc99ff;line-height:1.5;flex:1;}
+
+/* Platform grid */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 12px 0;}
+
+/* Platform card */
+.pcard{
+  background:#12122a;border-radius:12px;padding:11px 10px;
+  border:2px solid #252545;transition:border-color 0.3s,box-shadow 0.3s;
+  position:relative;
+}
+.pcard.ok{border-color:#00aa55;}
+.pcard.slow{border-color:#ffaa00;}
+.pcard.fast{border-color:#ff8800;}
+.pcard.danger{border-color:#ff3333;box-shadow:0 0 14px rgba(255,40,40,0.3);animation:dpulse 0.8s infinite alternate;}
+.pcard.over{border-color:#ff0000;box-shadow:0 0 24px rgba(255,0,0,0.6);animation:dpulse 0.4s infinite alternate;}
+@keyframes dpulse{from{box-shadow:0 0 8px rgba(255,0,0,0.3);}to{box-shadow:0 0 28px rgba(255,0,0,0.8);}}
+
+.ph{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.picon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#fff;flex-shrink:0;}
+.pname{font-size:13px;font-weight:bold;line-height:1.2;flex:1;}
+.pstatus{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:bold;white-space:nowrap;align-self:flex-start;}
+.st-ok{background:rgba(0,170,85,0.2);color:#00ee77;border:1px solid #00aa55;}
+.st-slow{background:rgba(255,170,0,0.2);color:#ffcc44;border:1px solid #ffaa00;}
+.st-fast{background:rgba(255,120,0,0.2);color:#ffaa44;border:1px solid #ff8800;}
+.st-danger{background:rgba(255,50,50,0.2);color:#ff6666;border:1px solid #ff3333;}
+.st-over{background:rgba(255,0,0,0.3);color:#ff3333;border:1px solid #ff0000;}
+
+.pct-row{display:flex;align-items:baseline;gap:4px;margin-bottom:2px;}
+.pct-val{font-size:26px;font-weight:bold;line-height:1;}
+.pct-lbl{font-size:10px;color:#666;}
+
+.pbar-wrap{height:8px;background:#1e1e3a;border-radius:4px;overflow:visible;position:relative;margin-bottom:5px;}
+.pbar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;overflow:hidden;position:relative;}
+.pbar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);animation:shimmer 2s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+.pbar-fill.bar-ok{background:linear-gradient(90deg,#007733,#00ee66);}
+.pbar-fill.bar-slow{background:linear-gradient(90deg,#cc8800,#ffcc00);}
+.pbar-fill.bar-fast{background:linear-gradient(90deg,#cc5500,#ff8800);}
+.pbar-fill.bar-over{background:#ff0000;}
+.target-marker{position:absolute;top:-3px;width:2px;height:14px;background:rgba(255,255,255,0.55);border-radius:1px;}
+
+.pace-txt{font-size:9px;color:#666;margin-bottom:9px;line-height:1.4;}
+
+/* Adjustment controls – large touch targets */
+.adj-area{border-top:1px solid #1e1e3a;padding-top:8px;}
+.adj-lbl{display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:6px;}
+.adj-val{font-size:13px;font-weight:bold;color:#0099ff;}
+.adj-btns{display:flex;gap:6px;align-items:center;}
+.adj-btn{
+  min-width:44px;height:36px;
+  background:#1a1a32;border:1px solid #3a3a5a;
+  color:#fff;border-radius:8px;font-size:18px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;cursor:pointer;font-weight:bold;
+  transition:background 0.15s;
+  -webkit-tap-highlight-color:rgba(0,150,255,0.2);
+}
+.adj-btn:active{background:#2a2a5a;}
+.adj-slider{
+  flex:1;-webkit-appearance:none;
+  height:20px;background:transparent;outline:none;cursor:pointer;
+}
+.adj-slider::-webkit-slider-runnable-track{height:6px;background:#1e1e3a;border-radius:3px;}
+.adj-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:26px;height:26px;
+  background:#0099ff;border-radius:50%;margin-top:-10px;
+  box-shadow:0 0 8px rgba(0,150,255,0.7);cursor:pointer;
+}
+.today-delta{font-size:10px;color:#666;margin-top:4px;text-align:right;min-height:14px;}
+
+/* Event log section */
+.ev-section{margin:12px 12px 0;background:#12122a;border-radius:12px;overflow:hidden;border:1px solid #252545;}
+.ev-toggle{
+  width:100%;padding:12px 14px;background:none;border:none;
+  color:#aaa;font-size:13px;font-weight:bold;text-align:left;
+  display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;min-height:44px;
+}
+.ev-toggle:active{background:#1a1a30;}
+.ev-toggle-arrow{font-size:11px;color:#666;transition:transform 0.2s;}
+.ev-toggle-arrow.open{transform:rotate(180deg);}
+.ev-list{padding:0 10px 10px;display:flex;flex-direction:column;gap:5px;}
+.ev-item{
+  display:flex;gap:7px;font-size:11px;
+  padding:7px 9px;background:#1a1a30;border-radius:7px;
+  border-left:3px solid transparent;animation:slIn 0.3s ease;
+}
+@keyframes slIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
+.ev-item.bad{border-left-color:#ff4444;}
+.ev-item.good{border-left-color:#00aa55;}
+.ev-item.warn{border-left-color:#ffaa00;}
+.ev-item.neutral{border-left-color:#444;}
+.ev-day{color:#555;flex-shrink:0;}
+.ev-txt{color:#bbb;line-height:1.45;}
+.ev-empty{color:#555;font-size:12px;padding:10px 14px;}
+
+/* Forecast section */
+.fc-section{margin:10px 12px 0;background:#14102a;border:1px solid #2a1e3a;border-radius:10px;padding:10px 13px;}
+.fc-lbl{font-size:10px;color:#7733aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+.fc-txt{font-size:12px;color:#cc88ff;line-height:1.5;}
+
+/* Fixed bottom action bar */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:#0f0f22;border-top:1px solid #252545;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
+}
+.next-btn{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,#0077ff,#00bbff);
+  border:none;border-radius:12px;color:#fff;font-size:17px;font-weight:bold;
+  cursor:pointer;transition:opacity 0.15s,transform 0.1s;
+  box-shadow:0 4px 18px rgba(0,140,255,0.45);
+  min-height:52px;
+  -webkit-tap-highlight-color:transparent;
+}
+.next-btn:active:not(:disabled){transform:scale(0.97);}
+.next-btn:disabled{background:#252545;box-shadow:none;color:#555;}
+
+/* Toasts */
+#toasts{
+  position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);
+  left:50%;transform:translateX(-50%);
+  width:calc(100% - 28px);max-width:360px;
+  z-index:8888;display:flex;flex-direction:column;gap:7px;
+  pointer-events:none;
+}
+.toast{
+  background:#14142e;border:2px solid #444;border-radius:11px;
+  padding:10px 13px;box-shadow:0 4px 16px rgba(0,0,0,0.6);
+  animation:toastIn 0.35s ease,toastOut 0.5s ease 3.5s forwards;
+}
+.toast.bad{border-color:#ff4444;}
+.toast.good{border-color:#00aa55;}
+.toast.warn{border-color:#ffaa00;}
+@keyframes toastIn{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-16px);}}
+.toast-plat{font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+.toast-msg{font-size:12px;color:#ddd;line-height:1.4;}
+.toast-eff{font-size:11px;margin-top:3px;}
+
+/* ===== RESULT ===== */
+#result{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,8,0.97);z-index:7777;
+  flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:calc(env(safe-area-inset-top,0px) + 30px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+  overflow-y:auto;
+}
+.res-rank{font-size:min(20vw,80px);font-weight:900;text-shadow:0 0 50px currentColor;margin-bottom:4px;margin-top:10px;}
+.res-title{font-size:min(6vw,24px);font-weight:bold;margin-bottom:6px;text-align:center;}
+.res-sub{font-size:min(3.5vw,14px);color:#888;margin-bottom:24px;text-align:center;line-height:1.5;}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;max-width:400px;margin-bottom:20px;}
+.res-card{background:#14142a;border-radius:10px;padding:12px 10px;text-align:center;border:2px solid #252545;}
+.res-card.pass{border-color:#00aa55;}
+.res-card.fail{border-color:#ff4444;}
+.res-pname{font-size:11px;color:#777;margin-bottom:3px;}
+.res-ppct{font-size:min(7vw,26px);font-weight:bold;}
+.res-pmark{font-size:15px;margin-top:3px;}
+.res-overall{font-size:min(4.5vw,17px);font-weight:bold;margin-bottom:22px;color:#ccc;text-align:center;line-height:1.5;max-width:320px;}
+.restart-btn{
+  padding:14px 44px;background:linear-gradient(135deg,#0077ff,#00bbff);
+  border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:bold;
+  cursor:pointer;box-shadow:0 4px 18px rgba(0,140,255,0.5);
+  min-height:52px;min-width:200px;
+}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:#111;}
+::-webkit-scrollbar-thumb{background:#3a3a5a;border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- ===== OPENING ===== -->
+<div id="opening">
+  <button id="skip-btn" onclick="skipOpening()">スキップ →</button>
+
+  <div class="scene" id="s1">
+    <div class="alarm">⏰</div>
+    <div class="s1-sub">ビッビッビッ！</div>
+    <div class="s1-msg">月末の朝。また始まる、果てしない戦いが...</div>
+  </div>
+
+  <div class="scene" id="s2">
+    <div class="train-outer">
+      <div class="train-body">
+        <div class="train-stripe"></div>
+        <div class="windows-row">
+          <div class="tw" id="tw1"></div>
+          <div class="tw" id="tw2"></div>
+          <div class="tw" id="tw3"></div>
+          <div class="tw" id="tw4"></div>
+        </div>
+      </div>
+      <div class="train-wheels">
+        <div class="wheel"></div><div class="wheel"></div>
+        <div class="wheel"></div><div class="wheel"></div>
+      </div>
+    </div>
+    <div class="s2-cap">ギュウギュウ電車...</div>
+    <div class="s2-sub">「早く着かないと... 媒体の調整が山積みだ」</div>
+  </div>
+
+  <div class="scene" id="s3">
+    <div class="office-wrap">
+      <div class="building">
+        <div class="bsign">AD AGENCY</div>
+        <div class="bwin-grid">
+          <div class="bw"></div><div class="bw"></div><div class="bw"></div>
+          <div class="bw"></div><div class="bw"></div><div class="bw"></div>
+          <div class="bw"></div><div class="bw"></div><div class="bw"></div>
+          <div class="bw"></div><div class="bw"></div><div class="bw"></div>
+        </div>
+        <div class="bdoor"></div>
+      </div>
+      <div class="walker">🏃</div>
+    </div>
+    <div class="s3-cap">やっと出社... PCを起動しなければ</div>
+  </div>
+
+  <div class="scene" id="s4">
+    <div class="monitor">
+      <div class="mscreen">
+        <div class="sline hi" style="width:78%;margin-bottom:2px;"></div>
+        <div class="sline" style="width:62%;"></div>
+        <div class="sline hi" style="width:72%;margin-top:4px;"></div>
+        <div class="sline" style="width:52%;"></div>
+        <div class="sline" style="width:68%;"></div>
+      </div>
+    </div>
+    <div class="mstand"></div>
+    <div class="mbase"></div>
+    <div id="desk-text"></div>
+    <button id="start-btn" onclick="startGame()">ゲームスタート！</button>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="game">
+  <!-- Sticky header -->
+  <div class="sticky-hdr">
+    <div class="shdr-row1">
+      <div class="shdr-title">📊 予算管理マスター</div>
+      <div class="shdr-day" id="day-label">Day 1 / 30</div>
+    </div>
+    <div class="mbar"><div class="mbar-fill" id="mbar-fill" style="width:3%"></div></div>
+    <div class="shdr-stats">
+      <div class="sstat">
+        <div class="sstat-l">総消化率</div>
+        <div class="sstat-v" id="stat-pct">0.0%</div>
+      </div>
+      <div class="sstat">
+        <div class="sstat-l">着地圏内</div>
+        <div class="sstat-v" id="stat-ok">0 / 6</div>
+      </div>
+      <div class="sstat">
+        <div class="sstat-l">残日数</div>
+        <div class="sstat-v" id="stat-rem">30日</div>
+      </div>
+      <div class="sstat">
+        <div class="sstat-l">総予算</div>
+        <div class="sstat-v" id="stat-budget" style="font-size:11px;">¥4.28M</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boss banner -->
+  <div class="boss-banner">
+    <div class="boss-ava">👔</div>
+    <div class="boss-msg" id="boss-msg">「今月もよろしく頼むぞ。予算超過は絶対ダメだからな」</div>
+  </div>
+
+  <!-- Platform grid -->
+  <div class="pgrid" id="pgrid"></div>
+
+  <!-- Forecast -->
+  <div class="fc-section">
+    <div class="fc-lbl">⚡ 明日の予報</div>
+    <div class="fc-txt" id="fc-text">—</div>
+  </div>
+
+  <!-- Event log (collapsible) -->
+  <div class="ev-section" id="ev-section">
+    <button class="ev-toggle" onclick="toggleEvLog()">
+      <span>📋 運用ログ &nbsp;<span id="ev-badge" style="color:#0099ff">0件</span></span>
+      <span class="ev-toggle-arrow" id="ev-arrow">▼</span>
+    </button>
+    <div class="ev-list" id="ev-list" style="display:none;">
+      <div class="ev-empty">本日の運用を開始してください</div>
+    </div>
+  </div>
+
+  <!-- Bottom padding for fixed bar -->
+  <div style="height:8px;"></div>
+</div>
+
+<!-- Fixed bottom bar -->
+<div class="bottom-bar" id="bottom-bar" style="display:none;">
+  <button class="next-btn" id="next-btn" onclick="advanceDay()">▶ 翌日へ進む</button>
+</div>
+
+<!-- ===== RESULT ===== -->
+<div id="result">
+  <div class="res-rank" id="res-rank">S</div>
+  <div class="res-title" id="res-title">完璧な予算着地！</div>
+  <div class="res-sub" id="res-sub">全媒体の消化率が99%以上でクリア！</div>
+  <div class="res-grid" id="res-grid"></div>
+  <div class="res-overall" id="res-overall"></div>
+  <button class="restart-btn" onclick="restartGame()">もう一度プレイ</button>
+</div>
+
+<!-- Toasts -->
+<div id="toasts"></div>
+
+<script>
+// ===== CONFIG ===== (same as desktop)
+const PLAT_CFG = [
+  {id:'google', name:'Google', short:'G',  color:'#4285F4', budget:1200000, variance:[0.78,1.32]},
+  {id:'meta',   name:'Meta',   short:'M',  color:'#1877F2', budget:950000,  variance:[0.60,1.45]},
+  {id:'yahoo',  name:'Yahoo!', short:'Y!', color:'#FF0033', budget:700000,  variance:[0.82,1.22]},
+  {id:'tiktok', name:'TikTok', short:'TT', color:'#ff0050', budget:600000,  variance:[0.45,1.65]},
+  {id:'line',   name:'LINE',   short:'L',  color:'#00B900', budget:450000,  variance:[0.78,1.28]},
+  {id:'x',      name:'X',      short:'X',  color:'#888',    budget:380000,  variance:[0.55,1.55]},
+];
+
+const EVENTS_DB = [
+  {p:'google', txt:'競合他社が入札を大幅引き上げ！CPC急騰中',     eff:1.38, type:'bad'},
+  {p:'google', txt:'Googleアルゴリズム更新・配信が一時停滞',      eff:0.52, type:'warn'},
+  {p:'google', txt:'スマートビディングが暴走！制御不能に',         eff:1.58, type:'bad'},
+  {p:'google', txt:'品質スコア改善でCPCダウン・配信量増加',       eff:1.20, type:'good'},
+  {p:'google', txt:'P-MAXキャンペーンが謎の消化スピードに',       eff:1.42, type:'bad'},
+  {p:'meta',   txt:'Metaピクセル不具合・コンバージョン計測停止',  eff:0.40, type:'warn'},
+  {p:'meta',   txt:'リール動画が急拡散！エンゲージメント爆増',    eff:1.52, type:'bad'},
+  {p:'meta',   txt:'iOS更新でオーディエンス精度が大幅低下',       eff:0.72, type:'warn'},
+  {p:'meta',   txt:'ASC+が自動的にターゲット拡張・配信急増',      eff:1.35, type:'bad'},
+  {p:'meta',   txt:'クリエイティブ審査に引っかかり配信停止',      eff:0.20, type:'warn'},
+  {p:'yahoo',  txt:'ヤフーニュース掲載でブランド検索が急増',      eff:1.30, type:'good'},
+  {p:'yahoo',  txt:'長期休暇でB2Bターゲットが全滅',              eff:0.58, type:'warn'},
+  {p:'yahoo',  txt:'競合他社の大型キャンペーンで入札戦争激化',   eff:1.25, type:'bad'},
+  {p:'yahoo',  txt:'Yahoo!ショッピング連動で消化ペースアップ',   eff:1.18, type:'good'},
+  {p:'tiktok', txt:'動画がFYPに乗った！予算が爆発的に消化中',    eff:1.90, type:'bad'},
+  {p:'tiktok', txt:'クリエイティブ疲労でCTRが崩壊',             eff:0.38, type:'warn'},
+  {p:'tiktok', txt:'ライバルブランドがTikTokに大型投資',         eff:1.45, type:'bad'},
+  {p:'tiktok', txt:'TikTok Shopとの連携で消化が加速',           eff:1.62, type:'bad'},
+  {p:'tiktok', txt:'コンテンツポリシー違反・一時配信停止',       eff:0.05, type:'warn'},
+  {p:'line',   txt:'LINE障害発生・配信が完全停止',               eff:0.15, type:'warn'},
+  {p:'line',   txt:'友だち追加キャンペーンが話題沸騰',           eff:1.48, type:'good'},
+  {p:'line',   txt:'LINEスタンプとのコラボで注目度急上昇',       eff:1.22, type:'good'},
+  {p:'line',   txt:'LINE NEWSとの連携で配信枠が拡大',            eff:1.30, type:'bad'},
+  {p:'x',      txt:'炎上案件発生・ブランドセーフティで強制停止', eff:0.10, type:'warn'},
+  {p:'x',      txt:'時事トレンドに乗って爆発的に拡散',           eff:1.58, type:'bad'},
+  {p:'x',      txt:'スパム対策強化で配信面が激減',              eff:0.65, type:'warn'},
+  {p:'x',      txt:'Xプレミアム連動広告が効果を発揮',           eff:1.32, type:'good'},
+  {p:'all',    txt:'業界全体でCPC高騰中！三連休の影響か',       eff:1.20, type:'bad'},
+  {p:'all',    txt:'月初め設定の一斉修正で全媒体が一時停滞',    eff:0.82, type:'warn'},
+  {p:'all',    txt:'競合他社の決算期で全媒体入札競争激化',      eff:1.25, type:'bad'},
+];
+
+const FORECASTS = [
+  '連休明けでB2Bターゲットの検索量が回復傾向',
+  '気温上昇でアウトドア関連のCTRが上がりそう',
+  '競合他社の決算発表が明日に迫っている',
+  '月末に近づき全媒体でCPCが上昇する傾向あり',
+  '動画広告のVTRが下落傾向。クリエイティブ疲労か',
+  '明日は大型セールの前日。ECクライアントに注意',
+  '特に異常なシグナルはなし。平常運転の見込み',
+  'SNS系媒体でエンゲージメント低下のシグナルあり',
+  'ニュースサイト経由のトラフィックが急増傾向',
+  '競合の新商品発売で検索広告の競争激化の予兆',
+];
+
+const BOSS_MSGS = {
+  1:  'さあ、新しい月だ。予算超過は絶対ダメだぞ',
+  3:  '調子はどうだ？各媒体ちゃんと消化できてるか？',
+  7:  '週次レポートの準備も忘れるな。消化率はどうだ？',
+  10: '10日経った。ペース的に問題はないか？',
+  14: '月の半分が過ぎた。遅れてる媒体はないか？',
+  18: '月末が見えてきたぞ。調整が必要なところはないか？',
+  22: 'あと1週間ちょっとだ！しっかり着地させろよ！',
+  25: '残り5日！予算消化の見通しはどうだ！？',
+  27: 'あと3日だぞ！全部ちゃんと収まるか確認しろ！',
+  29: '明日で終わりだ！絶対に超過するなよ！！',
+  30: '今日が最終日だ！神に祈れ！！！',
+};
+
+// ===== STATE =====
+let gs = {};
+let evLogOpen = false;
+
+function initState() {
+  gs = {day:1, totalDays:30, platforms:{}, eventLog:[], processing:false, gameOver:false};
+  PLAT_CFG.forEach(cfg => {
+    gs.platforms[cfg.id] = {id:cfg.id, spent:0, adjust:1.0, lastSpend:0};
+  });
+}
+
+function getCfg(id) { return PLAT_CFG.find(p => p.id === id); }
+function getPct(id) { return gs.platforms[id].spent / getCfg(id).budget * 100; }
+
+function getStatus(id) {
+  const p = gs.platforms[id];
+  const cfg = getCfg(id);
+  const pct = p.spent / cfg.budget * 100;
+  if (pct > 100.1) return {cls:'over', label:'超過!', stCls:'st-over'};
+  if (pct >= 99)   return {cls:'ok',   label:'着地圏', stCls:'st-ok'};
+  const remaining = cfg.budget - p.spent;
+  const remDays = gs.totalDays - gs.day + 1;
+  const ratio = (remaining / remDays) / (cfg.budget / gs.totalDays);
+  if (ratio > 1.25) return {cls:'slow', label:'遅れ',   stCls:'st-slow'};
+  if (ratio > 1.05) return {cls:'slow', label:'やや遅', stCls:'st-slow'};
+  if (ratio < 0.7)  return {cls:'fast', label:'速い',   stCls:'st-fast'};
+  if (ratio < 0.85) return {cls:'fast', label:'やや速', stCls:'st-fast'};
+  return {cls:'ok', label:'順調', stCls:'st-ok'};
+}
+
+// ===== SIMULATE =====
+function simulateDay() {
+  const remDays = gs.totalDays - gs.day + 1;
+  let events = [];
+
+  PLAT_CFG.forEach(cfg => {
+    if (Math.random() < 0.32) {
+      const pool = EVENTS_DB.filter(e => e.p === cfg.id);
+      if (pool.length) events.push({...pool[Math.floor(Math.random()*pool.length)], targetId: cfg.id});
+    }
+  });
+  if (Math.random() < 0.14) {
+    const pool = EVENTS_DB.filter(e => e.p === 'all');
+    if (pool.length) events.push({...pool[Math.floor(Math.random()*pool.length)], targetId: 'all'});
+  }
+  const seen = new Set();
+  events = events.filter(ev => { const k=ev.targetId; if(seen.has(k)) return false; seen.add(k); return true; });
+
+  PLAT_CFG.forEach(cfg => {
+    const p = gs.platforms[cfg.id];
+    const remaining = cfg.budget - p.spent;
+    if (remaining <= 0) return;
+    const expPace = remaining / remDays;
+    const [vmin,vmax] = cfg.variance;
+    const variance = vmin + Math.random()*(vmax-vmin);
+    let evMult = 1.0;
+    events.forEach(ev => { if(ev.targetId===cfg.id||ev.targetId==='all') evMult*=ev.eff; });
+    let spend = expPace * p.adjust * variance * evMult;
+    p.spent = Math.min(cfg.budget * 1.12, p.spent + Math.max(0, spend));
+    p.lastSpend = spend;
+  });
+
+  events.forEach(ev => {
+    const label = ev.targetId==='all' ? '全媒体' : getCfg(ev.targetId).name;
+    gs.eventLog.unshift({day:gs.day, txt:`[${label}] ${ev.txt}`, type:ev.type});
+    showToast(label, ev.txt, ev.eff, ev.type);
+  });
+  if (!events.length) gs.eventLog.unshift({day:gs.day, txt:'特に大きな外部要因なし。', type:'neutral'});
+  if (gs.eventLog.length > 40) gs.eventLog.length = 40;
+  return events;
+}
+
+// ===== TOASTS =====
+function showToast(platform, msg, eff, type) {
+  const c = document.getElementById('toasts');
+  const d = document.createElement('div');
+  d.className = `toast ${type==='bad'?'bad':type==='warn'?'warn':'good'}`;
+  const effTxt = eff>1 ? `📈 消化率 +${Math.round((eff-1)*100)}%` : `📉 消化率 ${Math.round((eff-1)*100)}%`;
+  const platColor = type==='bad'?'#ff6666':type==='warn'?'#ffcc44':'#44ee88';
+  const effColor = eff>1?'#ff8844':'#44aaff';
+  d.innerHTML = `<div class="toast-plat" style="color:${platColor}">${platform}</div>
+    <div class="toast-msg">${msg}</div>
+    <div class="toast-eff" style="color:${effColor}">${effTxt}</div>`;
+  c.appendChild(d);
+  setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 4200);
+}
+
+// ===== RENDER =====
+function renderPlatformCard(cfg) {
+  const p = gs.platforms[cfg.id];
+  const pct = getPct(cfg.id);
+  const st = getStatus(cfg.id);
+  const remDays = gs.totalDays - gs.day + 1;
+  const remaining = cfg.budget - p.spent;
+  const expPace = remaining / Math.max(1, remDays);
+  const barPct = Math.min(105, pct);
+  const barCls = pct>100?'bar-over':pct>97?'bar-ok':st.cls==='slow'?'bar-slow':st.cls==='fast'?'bar-fast':'bar-ok';
+  const pctColor = pct>100?'#ff3333':pct>=99?'#00ee66':st.cls==='slow'?'#ffcc44':'#ffffff';
+  const adjPct = Math.round(p.adjust*100);
+  const delta = p.lastSpend>0 ? `¥${Math.round(p.lastSpend).toLocaleString()}消化` : '';
+
+  return `<div class="pcard ${st.cls}" id="pcard-${cfg.id}">
+    <div class="ph">
+      <div class="picon" style="background:${cfg.color}">${cfg.short}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="pname">${cfg.name}</div>
+        <div style="font-size:9px;color:#666;margin-top:1px;">¥${Math.round(p.spent/10000)}万 / ¥${cfg.budget/10000}万</div>
+      </div>
+      <div class="pstatus ${st.stCls}">${st.label}</div>
+    </div>
+    <div class="pct-row">
+      <div class="pct-val" style="color:${pctColor}">${pct.toFixed(1)}</div>
+      <div class="pct-lbl">%</div>
+    </div>
+    <div class="pbar-wrap">
+      <div class="pbar-fill ${barCls}" style="width:${barPct}%"></div>
+      <div class="target-marker" style="left:99%"></div>
+    </div>
+    <div class="pace-txt">推奨 ¥${Math.round(expPace/1000)}千/日 残${remDays}日</div>
+    <div class="adj-area">
+      <div class="adj-lbl"><span>ペース調整</span><span class="adj-val" id="adjv-${cfg.id}">${adjPct}%</span></div>
+      <div class="adj-btns">
+        <button class="adj-btn" onclick="adjustPlatform('${cfg.id}',-10)">−</button>
+        <input type="range" class="adj-slider" min="50" max="150" value="${adjPct}"
+          oninput="setAdjust('${cfg.id}',this.value)" id="adjslider-${cfg.id}">
+        <button class="adj-btn" onclick="adjustPlatform('${cfg.id}',+10)">＋</button>
+      </div>
+    </div>
+    <div class="today-delta" id="delta-${cfg.id}">${delta}</div>
+  </div>`;
+}
+
+function renderUI() {
+  document.getElementById('day-label').textContent = `Day ${gs.day} / ${gs.totalDays}`;
+  document.getElementById('mbar-fill').style.width = `${(gs.day/gs.totalDays)*100}%`;
+
+  const bossTxt = BOSS_MSGS[gs.day];
+  if (bossTxt) document.getElementById('boss-msg').textContent = `「${bossTxt}」`;
+
+  const totalSpent = PLAT_CFG.reduce((s,c)=>s+gs.platforms[c.id].spent,0);
+  const totalBgt = PLAT_CFG.reduce((s,c)=>s+c.budget,0);
+  const overallPct = (totalSpent/totalBgt*100).toFixed(1);
+  const okCount = PLAT_CFG.filter(c=>getPct(c.id)>=99&&getPct(c.id)<=100.2).length;
+  const remDays = gs.totalDays - gs.day + 1;
+
+  document.getElementById('stat-pct').textContent = `${overallPct}%`;
+  document.getElementById('stat-ok').textContent = `${okCount} / 6`;
+  document.getElementById('stat-rem').textContent = `${remDays}日`;
+
+  document.getElementById('pgrid').innerHTML = PLAT_CFG.map(renderPlatformCard).join('');
+
+  const evList = document.getElementById('ev-list');
+  const evBadge = document.getElementById('ev-badge');
+  evBadge.textContent = `${gs.eventLog.length}件`;
+  if (gs.eventLog.length === 0) {
+    evList.innerHTML = '<div class="ev-empty">運用ログはまだありません</div>';
+  } else {
+    evList.innerHTML = gs.eventLog.slice(0,15).map(ev=>
+      `<div class="ev-item ${ev.type==='bad'?'bad':ev.type==='warn'?'warn':ev.type==='good'?'good':'neutral'}">
+        <span class="ev-day">D${ev.day}</span>
+        <span class="ev-txt">${ev.txt}</span>
+      </div>`
+    ).join('');
+  }
+
+  document.getElementById('fc-text').textContent = FORECASTS[Math.floor(Math.random()*FORECASTS.length)];
+
+  const nextBtn = document.getElementById('next-btn');
+  if (gs.day > gs.totalDays) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = '月末到達';
+  } else {
+    nextBtn.disabled = gs.processing;
+    nextBtn.textContent = gs.day < gs.totalDays ? `▶ Day ${gs.day+1} へ進む` : '▶ 月末を締める！';
+  }
+}
+
+function adjustPlatform(id, delta) {
+  const p = gs.platforms[id];
+  p.adjust = Math.min(1.5, Math.max(0.5, p.adjust + delta/100));
+  const pct = Math.round(p.adjust*100);
+  const sl = document.getElementById(`adjslider-${id}`);
+  const vl = document.getElementById(`adjv-${id}`);
+  if (sl) sl.value = pct;
+  if (vl) vl.textContent = `${pct}%`;
+}
+
+function setAdjust(id, val) {
+  gs.platforms[id].adjust = val/100;
+  const vl = document.getElementById(`adjv-${id}`);
+  if (vl) vl.textContent = `${val}%`;
+}
+
+function toggleEvLog() {
+  evLogOpen = !evLogOpen;
+  const list = document.getElementById('ev-list');
+  const arrow = document.getElementById('ev-arrow');
+  list.style.display = evLogOpen ? 'flex' : 'none';
+  arrow.classList.toggle('open', evLogOpen);
+}
+
+// ===== ADVANCE DAY =====
+async function advanceDay() {
+  if (gs.processing || gs.gameOver) return;
+  gs.processing = true;
+  document.getElementById('next-btn').disabled = true;
+  document.getElementById('next-btn').textContent = '運用中...';
+
+  await sleep(380);
+  simulateDay();
+
+  let overPlat = null;
+  PLAT_CFG.forEach(cfg => {
+    if (!overPlat && gs.platforms[cfg.id].spent > cfg.budget * 1.003) overPlat = cfg;
+  });
+
+  gs.day++;
+  await sleep(250);
+
+  if (overPlat) {
+    gs.gameOver = true;
+    renderUI();
+    await sleep(600);
+    showResult(false, overPlat.name);
+    return;
+  }
+  if (gs.day > gs.totalDays) {
+    gs.gameOver = true;
+    renderUI();
+    await sleep(500);
+    showResult(true, null);
+    return;
+  }
+
+  gs.processing = false;
+  renderUI();
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ===== RESULT =====
+function showResult(reachedEnd, overPlatName) {
+  document.getElementById('bottom-bar').style.display = 'none';
+  const resultEl = document.getElementById('result');
+  resultEl.style.display = 'flex';
+
+  const results = {};
+  let allPass = true, totalSpent = 0, totalBgt = 0;
+  PLAT_CFG.forEach(cfg => {
+    const pct = getPct(cfg.id);
+    const pass = pct >= 99 && pct <= 100.2;
+    results[cfg.id] = {pct, pass};
+    if (!pass) allPass = false;
+    totalSpent += gs.platforms[cfg.id].spent;
+    totalBgt += cfg.budget;
+  });
+  const overallPct = (totalSpent/totalBgt*100).toFixed(1);
+  const passCount = PLAT_CFG.filter(c=>results[c.id].pass).length;
+
+  const rankEl = document.getElementById('res-rank');
+  const titleEl = document.getElementById('res-title');
+  const subEl   = document.getElementById('res-sub');
+  const overallEl = document.getElementById('res-overall');
+
+  if (!reachedEnd && overPlatName) {
+    rankEl.textContent='💀'; rankEl.style.color='#ff3333';
+    titleEl.textContent='予算超過！ゲームオーバー';
+    subEl.textContent=`${overPlatName} の予算を超過... クビ確定。`;
+    overallEl.textContent='上司「終わったな。」';
+  } else if (allPass) {
+    rankEl.textContent='S'; rankEl.style.color='#ffd700';
+    titleEl.textContent='完璧な予算着地！！';
+    subEl.textContent='全媒体の消化率が99%以上！神の運用者！';
+    overallEl.textContent=`総消化率 ${overallPct}% ✨\n上司「さすがだ！！」`;
+  } else if (passCount >= 5) {
+    rankEl.textContent='A'; rankEl.style.color='#aaeeff';
+    titleEl.textContent='ほぼ完璧！';
+    subEl.textContent=`${passCount}/6 媒体が着地圏内でした`;
+    overallEl.textContent=`総消化率 ${overallPct}%\n上司「惜しかったな...」`;
+  } else if (passCount >= 4) {
+    rankEl.textContent='B'; rankEl.style.color='#88ff88';
+    titleEl.textContent='まずまずの成果';
+    subEl.textContent=`${passCount}/6 媒体が着地圏内でした`;
+    overallEl.textContent=`総消化率 ${overallPct}%\n上司「もっと頑張れ」`;
+  } else {
+    rankEl.textContent='C'; rankEl.style.color='#ffaa44';
+    titleEl.textContent='課題あり...';
+    subEl.textContent=`${passCount}/6 媒体しか着地できませんでした`;
+    overallEl.textContent=`総消化率 ${overallPct}%\n上司「これは反省が必要だ」`;
+  }
+
+  document.getElementById('res-grid').innerHTML = PLAT_CFG.map(cfg => {
+    const r = results[cfg.id];
+    const pct = r.pct.toFixed(1);
+    const mark = r.pass ? '✅' : (r.pct>100 ? '🔴 超過' : '⚠️ 未達');
+    const color = r.pass ? '#00ee66' : (r.pct>100 ? '#ff4444' : '#ffcc44');
+    return `<div class="res-card ${r.pass?'pass':'fail'}">
+      <div class="res-pname">${cfg.name}</div>
+      <div class="res-ppct" style="color:${color}">${pct}%</div>
+      <div class="res-pmark">${mark}</div>
+    </div>`;
+  }).join('');
+}
+
+function restartGame() {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('opening').style.display = 'block';
+  document.getElementById('bottom-bar').style.display = 'none';
+  evLogOpen = false;
+  initState();
+  runOpening();
+}
+
+// ===== START GAME =====
+function startGame() {
+  document.getElementById('opening').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('bottom-bar').style.display = 'block';
+  initState();
+  renderUI();
+}
+
+// ===== OPENING =====
+function skipOpening() {
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  startGame();
+}
+
+function buildTrain() {
+  [1,2,3,4].forEach((n,wi) => {
+    const tw = document.getElementById(`tw${n}`);
+    if (!tw) return;
+    tw.innerHTML = '';
+    const count = 5 + Math.floor(Math.random()*4);
+    for (let i=0;i<count;i++) {
+      const f = document.createElement('div');
+      f.className = 'face';
+      tw.appendChild(f);
+    }
+  });
+}
+
+let deskTyping = null;
+function typeDeskText(txt, cb) {
+  const el = document.getElementById('desk-text');
+  el.textContent = '';
+  let i = 0;
+  if (deskTyping) clearInterval(deskTyping);
+  deskTyping = setInterval(()=>{
+    if (i < txt.length) { el.textContent += txt[i++]; }
+    else { clearInterval(deskTyping); if(cb) cb(); }
+  }, 85);
+}
+
+function runOpening() {
+  buildTrain();
+  const scenes = ['s1','s2','s3','s4'];
+  const durations = [2500, 3200, 2800, 0];
+
+  function showScene(i) {
+    if (i >= scenes.length) return;
+    const el = document.getElementById(scenes[i]);
+    el.classList.add('active');
+    if (scenes[i] === 's4') {
+      setTimeout(()=>{
+        typeDeskText('さあ、、予算調整だ、、', ()=>{
+          setTimeout(()=>{ document.getElementById('start-btn').style.display='block'; }, 600);
+        });
+      }, 500);
+      return;
+    }
+    setTimeout(()=>{
+      el.classList.remove('active');
+      setTimeout(()=> showScene(i+1), 800);
+    }, durations[i]);
+  }
+
+  showScene(0);
+}
+
+runOpening();
+</script>
+</body>
+</html>
